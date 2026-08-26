@@ -1,16 +1,6 @@
 # compare_energy.jl — energy convergence comparison between the
 # momentum-space grouped ansatz (chi_scan.jl output) and real-space DMRG
 # (dmrg_reference.jl output), at the same L. Companion to compare_entropy.jl.
-#
-# The two methods now target the IDENTICAL Hamiltonian at the same L —
-# dmrg_reference.jl's real-space twisted-boundary construction was pinned
-# down (via full-spectrum comparison, not just ground-state energy) to
-# exactly match exact_gs_energy(V,L) from demo.jl/chi_scan.jl to ~1e-14 (see
-# dmrg_reference.jl's header). So both panels below are directly comparable:
-# raw E vs χ (panel 1) and |gap| = |E(χ) - E_exact| vs χ on a shared
-# log-scale axis (panel 2, answering "which method converges faster/more
-# reliably with bond dimension").
-#
 # Run from the repo root:   julia --project=. grouped_ansatz/post_processing/compare_energy.jl
 
 using TensorKit, JLD2, Plots, Printf

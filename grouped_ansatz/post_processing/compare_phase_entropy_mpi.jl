@@ -1,11 +1,6 @@
 # compare_phase_entropy_mpi.jl — L=16 version of compare_phase_entropy.jl,
 # reading from the MPI phase-scan output (phase_scan_vmc_mpi.jl /
-# phase_scan_dmrg.jl at L=16). Extended to show ALL scanned χ per phase
-# (not just the largest), with each phase (V) assigned a fixed hue and χ
-# within that phase mapped to a light->dark sequential ramp on that hue —
-# so phase identity reads as color family, χ reads as shade, and a 6th χ
-# doesn't require a 7th arbitrary color.
-#
+# phase_scan_dmrg.jl at L=16). 
 # Run from the repo root:   julia --project=. grouped_ansatz/post_processing/compare_phase_entropy_mpi.jl
 
 using TensorKit, JLD2, Plots, Printf

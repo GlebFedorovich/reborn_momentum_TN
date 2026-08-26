@@ -3,42 +3,7 @@
 # dimension χ and recording ground-state energy + entanglement entropy at
 # each bond — a fully independent cross-check to compare against
 # grouped_ansatz/chi_scan.jl's momentum-space entropy-vs-χ results.
-#
-# BOUNDARY CONDITION: closes the chain with a TWISTED hopping bond between
-# site 1 and site L (c†_1 c_L picks up an extra phase e^{iθ}; θ=π is the
-# "antiperiodic" twist, matching the half-odd-integer momentum quantization
-# k(i) = -π + π(2i-1)/L used by exact_gs_energy() elsewhere in this project)
-# plus a plain (untwisted) periodic interaction bond between site 1 and L —
-# the interaction is phase-independent (density-density), so "twisting" only
-# ever applies to the hopping term. Long-range fermionic MPO terms aren't
-# built automatically by @mpoham the way nearest-neighbour terms are (unlike
-# spin models, e.g. σᶻᶻ{i,j}, a c⁺c⁻-type term needs correctly-sided :L/:R
-# operators AND — confirmed empirically — @mpoham DOES thread the Jordan-Wigner
-# string through the intermediate sites correctly for a term{lattice[1],lattice[L]}
-# placement, validated to 8 digits against an independent real-space ED at
-# L=4 (E_DMRG = E_ED = -3.37228132) before trusting it here.
-#
-# EXACT MATCH TO exact_gs_energy(V,L) (demo.jl/chi_scan.jl): resolved by
-# comparing the FULL eigenvalue spectrum (not just the ground state — a
-# single-eigenvalue match can be coincidental at small L) between the
-# momentum-space Hamiltonian's N=L/2 sector and several real-space
-# candidates. The match: antiperiodic hopping (as above) + PLAIN nearest-
-# neighbour interaction 2V·n_i·n_{i+1} (note the factor of 2 — NOT V·n_i·n_{i+1},
-# and NOT the particle-hole-shifted (n-1/2)(n-1/2) form tried earlier).
-# Verified to ~1e-14 at both L=4 and L=8 against exact_gs_energy. So this
-# script now targets the IDENTICAL Hamiltonian used throughout the rest of
-# this project — E_DMRG(L,V) IS directly, bit-for-bit comparable to
-# exact_gs_energy(V,L) and to the momentum-space ansatz's own results.
-#
-# Real-space entanglement entropy is ALSO a different quantity than the
-# momentum-space entropy tracked in chi_scan.jl — see [[finding-two-entanglement-notions]]:
-# real-space entropy for a gapless 1D chain follows the Calabrese-Cardy
-# ~(c/6)ln(L) open-chain scaling law (bond-position-dependent, peaked at the
-# chain center), NOT the momentum-space Fermi-surface-peaked profile. Useful
-# comparison here is: (a) energy convergence vs χ, and (b) how much bond
-# dimension real-space DMRG needs vs. how much χ the momentum-space ansatz
-# needs — not a literal one-to-one entropy match.
-#
+
 # Run from the repo root:   julia --project=. grouped_ansatz/runs/dmrg_reference.jl
 
 using TensorKit, TensorOperations, LinearAlgebra, Printf, Statistics
@@ -59,18 +24,7 @@ folder_name = "grouped_ansatz/output/dmrg_reference"
 mkpath(folder_name)
 
 # ---------------------------------------------------------------------------
-# U1(particle number) × FermionParity symmetric spinless-fermion operators.
-# MPSKitModels' own c_plus/c_min (fermionoperators.jl) only carry FermionParity
-# (no U1) — DMRG with just that symmetry doesn't conserve total particle
-# number, and empirically converges to the WRONG total-N sector (confirmed:
-# an unconstrained-N run at L=6 landed on E=-3.489 vs the true GS -4.196,
-# fully converged (ϵ~1e-16) but in the wrong sector — total charge just isn't
-# pinned without U1). Fix: hand-build the same operators (mirroring
-# MPSKitModels' fermionoperators.jl construction exactly) with the combined
-# sector FermionParity ⊠ U1Irrep, then pin the FiniteMPS boundary charges to
-# force exactly L÷2 particles — this is the same boundary-charge-pinning
-# trick src/src.jl's get_start uses for the momentum-space ansatz (there with
-# an extra ZNIrrep momentum charge that's irrelevant here in real space).
+# U1(particle number) × FermionParity symmetric spinless-fermion operators
 # ---------------------------------------------------------------------------
 const Sec = FermionParity ⊠ U1Irrep
 
@@ -111,20 +65,7 @@ function c_number_sym(elt = ComplexF64)
 end
 
 # ---------------------------------------------------------------------------
-# Real-space t-V chain MPO, twisted-boundary closure — EXACT match to
-# exact_gs_energy(V,L):
-#   H = -t Σ_{i=1}^{L-1} (c†_i c_{i+1} + h.c.) + 2V Σ_{i=1}^{L-1} n_i n_{i+1}
-#       - t·e^{iθ} c†_1 c_L - t·e^{-iθ} c†_L c_1 + 2V n_1 n_L
-# PLAIN interaction n_i n_{i+1} (not the particle-hole-shifted (n-1/2)(n-1/2)
-# form tried earlier) with coefficient 2V (not V) — see the file header for
-# how this was pinned down (full-spectrum comparison against the momentum-
-# space Hamiltonian, not just ground-state energy). Since plain n·n interaction
-# is NOT particle-hole symmetric, filling is no longer auto-pinned to L/2 by
-# symmetry — the explicit U1 boundary-charge pinning (Vleft/Vright below) is
-# now the ONLY thing enforcing L/2 filling, not "belt and braces" redundancy.
-# For real θ (as here) the twisted hop coefficient e^{iθ} is just ±1, so TB
-# gets scaled by -cos(θ) on the wraparound bond (θ=π ⇒ +t, the antiperiodic
-# sign flip; θ=0 ⇒ -t, plain periodic).
+# Real-space t-V chain MPO, twisted-boundary closure
 # ---------------------------------------------------------------------------
 function build_H(L, t, V; twist = π)
     n = c_number_sym(ComplexF64)
@@ -148,13 +89,7 @@ function build_H(L, t, V; twist = π)
 end
 
 # ---------------------------------------------------------------------------
-# Independent exact-diagonalization reference, matched to build_H(): sparse +
-# restricted to the N=L÷2 particle sector (dense full Fock space is 2^L × 2^L
-# — infeasible at L=16; sector-restricted dimension is C(L, L÷2) = 12870 at
-# L=16, trivial for a Krylov solve). Directly verified against
-# exact_gs_energy(V,L) to ~1e-14 at L=4 and L=8 — see build_H's docstring for
-# how this Hamiltonian form was pinned down and the L=4 long-range/JW-string
-# validation against DMRG at L=4.
+# Independent exact-diagonalization reference, matched to build_H()
 # ---------------------------------------------------------------------------
 function ed_reference(L, t, V; twist = π)
     Nn = L ÷ 2
@@ -215,9 +150,7 @@ for χ in χ_list
     println("\n", "="^70)
     println("χ = $χ   (L=$L, t=$t_hop, V=$V_target, DMRG2, twisted boundary θ=$(round(twist_θ,digits=4)))")
     println("="^70)
-
-    # initial bond space: generous per-charge-sector allocation so DMRG2's
-    # trscheme=truncrank(χ) (not the initial space) is what actually limits χ.
+    
     per_sector = max(2, χ)
     vspace_mid = Vect[Sec]([(mod(k, 2), k) => per_sector for k in 0:L]...)
     ψ0 = FiniteMPS(rand, ComplexF64, L, pspace, vspace_mid; left = Vleft, right = Vright)

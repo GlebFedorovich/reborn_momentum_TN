@@ -1,13 +1,6 @@
 # compare_entropy.jl — side-by-side entanglement entropy comparison between
 # the momentum-space grouped ansatz (chi_scan.jl output) and real-space DMRG
-# (dmrg_reference.jl output), at the same L. Two panels rather than one
-# overlaid plot: the x-axes are genuinely different quantities — momentum-space
-# bonds separate pair-sites labeled by (k,k+π), real-space bonds are literal
-# chain positions — so overlaying would be visually misleading, not just
-# differently scaled. See the running commentary in chi_scan.jl / dmrg_reference.jl
-# for why the two entropy magnitudes/shapes differ physically (Fermi-surface
-# peak vs. Calabrese-Cardy arch).
-#
+# (dmrg_reference.jl output), at the same L.
 # Run from the repo root:   julia --project=. grouped_ansatz/post_processing/compare_entropy.jl
 
 using TensorKit, JLD2, Plots, Printf

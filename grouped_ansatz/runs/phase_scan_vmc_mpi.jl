@@ -1,19 +1,4 @@
-# phase_scan_vmc_mpi.jl — MPI-parallelized version of phase_scan_vmc.jl:
-# same LL-vs-CDW phase scan (V_list straddling V=2t), but each SR step's
-# sampling is split across several decorrelated replica walkers via Carlo's
-# MPIScheduler (ranks_per_run left at its default, 1 — see chi_scan_mpi.jl
-# for the full explanation of why that's the correct setting and not :all).
-#
-# IMPORTANT — must be launched via mpiexecjl, not plain `julia`:
-#   OPENBLAS_NUM_THREADS=1 ~/.julia/bin/mpiexecjl --project=. -n <K+1> julia grouped_ansatz/runs/phase_scan_vmc_mpi.jl
-#
-# OPENBLAS_NUM_THREADS=1 — see chi_scan_mpi.jl's header for why: Julia's BLAS
-# thread pool (default 8 threads/process observed here) stacks on top of the
-# MPI-level parallelism and can oversubscribe the CPU if not pinned. Pin it
-# for every future launch even though a live check of this specific
-# workload's running processes didn't show heavy active oversubscription.
-#
-# Output: grouped_ansatz/output/phase_scan_mpi/chi_scan/chi_scan_L{L}_V{V}_chi{χ}.jld2
+# phase_scan_vmc_mpi.jl — MPI-parallelized version of phase_scan_vmc.jl
 
 using TensorKit, TensorOperations, LinearAlgebra, Printf, Statistics, Random
 using MPSKit, Plots
@@ -176,8 +161,7 @@ function exact_gs_energy(V, L)
 end
 
 # ---------------------------------------------------------------------------
-# SR hyperparameters — n_sweeps_hi raised to 3000 (from 2500) per the
-# requested settings for this L=16 run.
+# SR hyperparameters
 # ---------------------------------------------------------------------------
 η0          = 0.2
 η_min       = 0.05
@@ -230,10 +214,6 @@ for V_target in V_list
             println("="^70)
         end
 
-        # Same seed-sync discipline as chi_scan_mpi.jl: fix the seed (same on
-        # every rank) so the initial mps_chain is bit-identical across ranks
-        # (required for the replica accumulators to combine validly), then
-        # reseed per-rank so the actual MC sampling decorrelates.
         Random.seed!(hash((L, χ, V_target)))
         mps_chain, V_phys_list, V_left_list, zpairs = M.get_start_fermi_sea(L, χ; ε = 3.0)
         s_trial = M.fermi_sea_config(L)

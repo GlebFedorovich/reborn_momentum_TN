@@ -16,13 +16,7 @@ const M = GroupedMomentumMPS
 
 using Carlo, Carlo.JobTools
 
-# Bipartite entanglement entropy at each bond of a given chain — same
-# construction as demo/demo.jl's compute_entropy, and directly comparable to
-# the momentum-space entanglement findings in [[finding-two-entanglement-notions]]
-# / [[finding-mode-ordering-folding]]. Defined up here (rather than only at the
-# end) so it can be called on the FRESH Fermi-sea start, before the SR loop
-# mutates mps_chain_start in place via apply_update! — that's the only way to
-# see the initial-state entropy profile alongside the optimized one later.
+# Bipartite entanglement entropy at each bond 
 function compute_entropy(ψ::FiniteMPS)
     ψ = normalize(ψ)   # makes Σλ²=1 meaningful, and matches this function's convention check
     entropy_list = Float64[]
@@ -40,9 +34,6 @@ function compute_entropy(ψ::FiniteMPS)
     return entropy_list
 end
 
-# Generic over L (was hardcoded to ZNIrrep{16}, i.e. only L=8, before — the
-# main project's demo.jl had to add a new hardcoded method by hand every time
-# L changed; a free type parameter avoids repeating that).
 StructUtils.lowerkey(::JSON.JSONStyle, s::ProductSector{Tuple{FermionParity, U1Irrep, ZNIrrep{N}}}) where {N} =
     string(s)
 
@@ -56,9 +47,6 @@ weight_start = M.get_overlap(mps_chain_start, string_start)[1]
 @show space(mps_chain_start[end], 3)
 @show space(string_start[end], 3)
 
-# Captured BEFORE optimization (mps_chain_start is mutated in place by
-# apply_update! inside the SR loop below) — the initial-state counterpart to
-# ent_entropy_final, plotted together at the end.
 ent_entropy_initial = compute_entropy(FiniteMPS(mps_chain_start))
 
 function fg(mps_chain, zpairs, folder_name, id, maxiter, weight_in, config_start; V = 1.0, α = 1.0)
@@ -123,16 +111,7 @@ function fg(mps_chain, zpairs, folder_name, id, maxiter, weight_in, config_start
     return f, f_error, accepted_flips, total_attempts, G_out, dict[end]
 end
 
-# Gauge-projected stochastic reconfiguration — same S/g construction as
-# demo/demo.jl's sr_step! (centering ⟨O⟩ removes the global-scale gauge
-# direction), but the (S + shift·I)δp = g linear solve is now done via
-# KrylovKit.linsolve (CG on a Tikhonov-regularized S) instead of the
-# truncated-eigendecomposition pseudo-inverse. shift = rcond·λmax plays the
-# same role as the old rcond·λmax eigenvalue floor — it's a smooth analogue
-# of the hard spectral cutoff, applied as a ridge term rather than truncating
-# directions outright. λmax itself comes from KrylovKit.eigsolve (Lanczos,
-# top eigenvalue only) rather than a dense eigmax(S), keeping the whole step
-# iterative — no O(N³) full diagonalization anywhere.
+# Gauge-projected stochastic reconfiguration 
 function sr_step!(mps_chain, dict_entry; η = 0.2, rcond = 1e-3)
     Wm      = dict_entry["results"]["W"]["mean"]
     E_mean  = dict_entry["results"]["Energy"]["mean"] / Wm
@@ -158,15 +137,7 @@ end
 folder_name = "grouped_ansatz/output"
 mkpath(folder_name)
 
-# Exact ground-state energy of H_mom(V), restricted to the total-momentum-0
-# sector (where the ansatz's own symmetry lives, and — per
-# [[plan-importance-sampling]] — where the true GS lives for V<2 at L≡0 mod4)
-# via sparse ED + KrylovKit. Dense full-sector ED (the previous version of
-# this function) is O(D³) with D=C(L,L/2) — fine at L=8 (D=70) or L=12
-# (D=924), but D=12870 at L=16 makes the dense eigendecomposition intractable
-# (~2e12 flops). Momentum-0-sector-restricted D is far smaller (validated:
-# L=8 D=10, L=12 D=80, L=16 D=810 — matches the dense answer exactly at L=8
-# and L=12, 0.03s at L=16 vs. effectively unusable dense).
+# Exact ground-state energy of H_mom(V), restricted to the total-momentum-0 sector 
 function exact_gs_energy(V; L = L)
     Nn = L ÷ 2
     k(i) = -π + π * (2i - 1) / L
@@ -216,42 +187,15 @@ println("\n===== single direct-sampler MC run (GROUPED, L=$L, χ=$χ, V=$V_targe
 @printf("Var(E_loc)   = %.3e\n", E_var)
 
 # ---------------------------------------------------------------------------
-# Fixed-V MC-SR: decaying step size + tempered importance sampling, exactly
-# the recipe that reached the GS for the unpaired ansatz (see
-# [[finding-exact-sr-stepsize]], [[plan-importance-sampling]]).
+# Fixed-V MC-SR parameters
 # ---------------------------------------------------------------------------
-η0          = 0.2   # best-known L=12 recipe (chi_scan.jl): this η0/η_min/rcond/α combo
-                       # gave gap +0.039 at χ=16 and +0.026-0.027 at χ=20/24
+η0          = 0.2  
 η_min       = 0.05
-# τ rescaled to reach the floor at ~90% through THIS run's length (300 steps):
-# η_sched hits η_min when step/τ = η0/η_min - 1 = 4, so τ = 270/4 = 67.5 puts
-# the floor at step 270.
-# τ           = 67.5
 τ =  η0/η_min - 1
 η_sched(step) = max(η_min, η0 / (1 + step / τ))
-# REVERTED to 1e-6: tightening to 1e-4 DID suppress the norm(δp) spikes
-# (confirmed the mechanism) but made the actual result worse (gap +0.271 vs
-# +0.098) — count(keep) roughly halved (38-40 → 26-29), so the near-null
-# directions being cut were carrying real, needed information, not just
-# noise. Best config found so far: α=0.5, τ scaled for run length, rcond=1e-6.
 rcond       = 1e-5
-# At L=16: α=0.7 backfired (sampler collapse). α=0.3 clearly helped (gap
-# +0.417 vs +0.528 at α=0.5) despite ESS dropping to ~0.22. α=0.1 pushed too
-# far — ESS crashed to ~0.01-0.03 for the ENTIRE run (not just late), meaning
-# the estimator itself was unreliable throughout (error bars routinely ±1-3,
-# bigger than the energy scale) — that run's improved-looking gap isn't
-# trustworthy. Now testing α=0.2 (between the working 0.3 and broken 0.1) —
-# and back at L=12, where α has never been touched away from 0.5.
 α_temper    = 0.5
 n_opt_steps  = 400
-# SWEEP RAMP (variance reduction where it matters): the ESS diagnostic showed
-# ‖∇E‖ descends cleanly for a while then plateaus in noise at a level set by
-# the sampling precision. Early on the true gradient is large, so a cheap/
-# noisy estimate still points the right way; only once the true gradient
-# shrinks toward the noise floor does the extra precision start to matter.
-# Ramp sweeps_opt linearly over the run instead of a flat count — capped at
-# 2000 (lower than the earlier 500→3000 ramp) since more steps (400 vs 300)
-# already buys more total samples at fixed cost per step.
 n_sweeps_lo  = 1500
 n_sweeps_hi  = 3000
 n_sweeps_sched(step) = round(Int, n_sweeps_lo + (n_sweeps_hi - n_sweeps_lo) * (step - 1) / (n_opt_steps - 1))
@@ -294,20 +238,9 @@ end
         V_target, χ, opt_E[end], Egs_target, opt_E[end] - Egs_target,
         abs(opt_E[end] - Egs_target) < 2e-2 ? "*** at GS (within MC noise) ***" : "(off GS)")
 
-# Bipartite entanglement entropy at each bond of the FINAL (post-optimization)
-# chain — a flat-topped plateau (linear ordering) vs. a two-peak/dip shape
-# (π-fold / grouped ordering) is exactly what ED studies predicted for this
-# chain's pairing scheme; compared against ent_entropy_initial (captured
-# above, before the SR loop) to see how the Fermi-sea start's entropy profile
-# evolves under optimization.
+# Bipartite entanglement entropy at each bond of the FINAL (post-optimization) chain 
 ent_entropy_final = compute_entropy(FiniteMPS(mps_chain_start))
 
-# x-tick labels for the entropy plot: each pair-site s (1..L/2) holds momenta
-# (k_s, k_s+π) — see the pair-site-momenta breakdown discussed for L=8. Express
-# each as a reduced fraction of π so ticks read like "-5π/8" instead of a
-# decimal, and place them at each SITE position while the entropy points sit
-# at bond MIDPOINTS (b+0.5, between site b and b+1) so the plot visually shows
-# which momenta flank each cut.
 function momentum_frac_label(idx, L)
     k = M.idx_to_momentum(idx, L)
     num = round(Int, (k / π) * L)
@@ -346,9 +279,6 @@ plt = plot(plt_E, plt_g, plt_ess, plt_S, layout = (4, 1), size = (780, 1200),
 savefig(plt, folder_name * "/grouped_anneal_energy.png")
 println("wrote $(folder_name)/grouped_anneal_energy.png")
 
-# Does ESS crash exactly on the steps where ‖∇E‖ spikes? Correlation of
-# -log(ESS) with ‖∇E‖ close to 1 (or a scatter that's visibly monotone) would
-# confirm the heavy-tailed-importance-weight hypothesis; near 0 would refute it.
 gnorm_med = median(opt_gnorm)
 spike_steps = findall(>(3 * gnorm_med), opt_gnorm)
 @printf("\n----- ESS vs ‖∇E‖-spike diagnostic -----\n")

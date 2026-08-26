@@ -1,17 +1,5 @@
 # phase_scan_vmc.jl — same MC-SR χ-scan recipe as chi_scan.jl, but scanning
-# ACROSS the LL→CDW phase transition (V_list straddling V=2t) rather than at
-# a single V, to test whether the momentum-space grouped ansatz needs
-# different bond dimension in the two phases. The t-V chain at half filling
-# maps to XXZ with Δ=V/(2t) via Jordan-Wigner: Δ<1 (V<2t) is the gapless
-# Luttinger liquid, Δ>1 (V>2t) is the gapped CDW/Néel phase (charge order,
-# → real-space product state as V→∞). Companion: phase_scan_dmrg.jl (same
-# V_list, real-space side) + compare_phase_entropy.jl (side-by-side plot).
-#
-# Self-contained — all helper functions copied from chi_scan.jl.
-#
-# Run from the repo root:   julia --project=. grouped_ansatz/runs/phase_scan_vmc.jl
-#
-# Output: grouped_ansatz/output/phase_scan/chi_scan/chi_scan_L{L}_V{V}_chi{χ}.jld2
+# ACROSS the LL→CDW phase transition
 
 using TensorKit, TensorOperations, LinearAlgebra, Printf, Statistics, Random
 using MPSKit, Plots

@@ -1,11 +1,5 @@
-# phase_scan_dmrg.jl — real-space DMRG counterpart to phase_scan_vmc.jl:
-# same L, same χ_list, same V_list straddling the V=2t LL→CDW transition,
-# using the exact-matched Hamiltonian construction validated in
-# dmrg_reference.jl (antiperiodic hop + plain V·n_i·n_{i+1} interaction —
-# see that file's header for how this was pinned down).
-#
+# phase_scan_dmrg.jl — real-space DMRG counterpart to phase_scan_vmc.jl
 # Run from the repo root:   julia --project=. grouped_ansatz/runs/phase_scan_dmrg.jl
-#
 # Output: grouped_ansatz/output/phase_scan/dmrg/dmrg_L{L}_V{V}_chi{χ}.jld2
 
 using TensorKit, TensorOperations, LinearAlgebra, Printf, Statistics

@@ -1,12 +1,3 @@
-# chi_scan_mpi.jl — same MC-SR χ-scan recipe as chi_scan.jl, but each SR
-# step's sampling is done by several DECORRELATED REPLICA WALKERS running in
-# parallel across MPI ranks (Carlo.jl's ranks_per_run mode), instead of one
-# sequential chain. Carlo pools the raw per-replica accumulators itself
-# (run.jl's MPI.gather + merge_results) before fg() reads the merged
-# results.json — this reuses Carlo's own tested merge logic rather than
-# hand-rolling it, so the resulting E/gradient statistics are exactly as
-# valid as the single-chain version, just gathered K times faster in wall time.
-
 # Load results later with, e.g.:
 #   using TensorKit, JLD2
 #   d = load("grouped_ansatz/output/chi_scan_mpi/chi_scan_L8_chi16.jld2")
@@ -17,10 +8,7 @@ using MPSKit, Plots
 using JSON, JLD2
 using SparseArrays, KrylovKit
 
-# Pin BLAS to 1 thread/process regardless of how this script is launched —
-# see the header comment above for why (BLAS's own thread pool stacking on
-# top of MPI-level parallelism). Setting it here means it applies even if
-# OPENBLAS_NUM_THREADS wasn't set on the launch command.
+# Pin BLAS to 1 thread/process regardless of how this script is launched 
 BLAS.set_num_threads(1)
 
 include("../src/grouped_mps.jl")

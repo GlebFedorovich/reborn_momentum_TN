@@ -1,16 +1,3 @@
-# chi_scan.jl — for FIXED L, scan several χ (bond dimension) values, running
-# the same MC-SR recipe as demo.jl for each one, and save every diagnostic
-# (energy, gradient norm, MC error bars, ESS, entanglement entropy — both
-# initial Fermi-sea-start and final post-optimization) plus the converged MPS
-# itself to a separate .jld2 file per χ. 
-
-# Load results later with, e.g. (TensorKit MUST be `using`'d before load() so
-# the saved TensorMap/GradedSpace types deserialize as themselves rather than
-# JLD2 reconstructing dummy placeholder types):
-#   using TensorKit, JLD2
-#   d = load("grouped_ansatz/output/chi_scan/chi_scan_L16_chi16.jld2")
-#   d["ent_entropy_final"], d["opt_E"], d["mps_chain_final"], ...
-
 using TensorKit, TensorOperations, LinearAlgebra, Printf, Statistics, Random
 using MPSKit, Plots
 using JSON, JLD2

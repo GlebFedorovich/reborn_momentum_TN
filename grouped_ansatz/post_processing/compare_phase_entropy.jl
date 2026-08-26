@@ -1,12 +1,3 @@
-# compare_phase_entropy.jl — the actual point of phase_scan_{vmc,dmrg}.jl:
-# does the momentum-space grouped ansatz need a DIFFERENT bond dimension than
-# real-space DMRG depending on which side of the V=2t Luttinger-liquid/CDW
-# transition we're in? Two panels (VMC momentum-space | DMRG real-space),
-# each overlaying the LL-phase and CDW-phase entanglement entropy profile at
-# the largest χ scanned — plus a numeric area-law χ_min = e^S summary table
-# (see [[momentum-space VMC project]] memory for the same χ_min estimate used
-# earlier at a single V).
-#
 # Run from the repo root:   julia --project=. grouped_ansatz/post_processing/compare_phase_entropy.jl
 
 using TensorKit, JLD2, Plots, Printf
