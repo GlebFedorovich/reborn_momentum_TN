@@ -49,11 +49,11 @@ weight_start = M.get_overlap(mps_chain_start, string_start)[1]
 
 ent_entropy_initial = compute_entropy(FiniteMPS(mps_chain_start))
 
-function fg(mps_chain, zpairs, folder_name, id, maxiter, weight_in, config_start; V = 1.0, α = 1.0)
+function fg(mps_chain, zpairs, folder_name, id, maxiter, weight_in, config_start; V = 1.0, α = 1.0, binsize_target::Int = 30)
     tm = TaskMaker()
     tm.sweeps = Int(maxiter)
     tm.thermalization = Int(0)
-    tm.binsize = Int(30)
+    tm.binsize = min(binsize_target, Int(maxiter))  # capped so binsize never exceeds available sweeps
 
     tm.mps_chain = mps_chain
     tm.L = L
@@ -173,10 +173,11 @@ end
 # Single run: sanity-check ⟨E_loc⟩ before optimizing.
 # ---------------------------------------------------------------------------
 n_sweeps = 1000
+binsize_target = 30   # desired Carlo error-estimation bin size, capped to maxiter when a step has fewer sweeps than this
 V_target = 0.5
 
 f, f_error, accepted, attempts, G_out, dict_entry =
-    fg(mps_chain_start, zpairs, folder_name, "single", n_sweeps, weight_start, s_trial; V = V_target)
+    fg(mps_chain_start, zpairs, folder_name, "single", n_sweeps, weight_start, s_trial; V = V_target, binsize_target = binsize_target)
 
 Wm_single = dict_entry["results"]["W"]["mean"]
 E_var = dict_entry["results"]["Energy2"]["mean"] / Wm_single - f^2
@@ -220,7 +221,7 @@ for step in 1:n_opt_steps
     n_sw = n_sweeps_sched(step)
     w = M.get_overlap(mps_chain_start, string_start)[1]
     Es, Es_err, _, _, _, de = fg(mps_chain_start, zpairs, folder_name, "anneal_$step",
-                                  n_sw, w, s_trial; V = V_target, α = α_temper)
+                                  n_sw, w, s_trial; V = V_target, α = α_temper, binsize_target = binsize_target)
     _, gnorm = sr_step!(mps_chain_start, de; η = η_t, rcond = rcond)
     push!(opt_E, Es * L); push!(opt_Eerr, Es_err * L)
     push!(opt_Eref, Egs_target); push!(opt_gnorm, gnorm); push!(opt_nsweep, n_sw)

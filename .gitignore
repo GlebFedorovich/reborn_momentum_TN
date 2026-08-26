@@ -12,3 +12,4 @@ grouped_ansatz/output/grouped_job_*.results.json
 .claude/
 .vscode/
 .figures/
+Manifest.toml

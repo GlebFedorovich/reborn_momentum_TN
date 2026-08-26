@@ -48,11 +48,11 @@ function compute_entropy(ψ::FiniteMPS)
     return entropy_list
 end
 
-function fg(mps_chain, zpairs, folder_name, id, maxiter, weight_in, config_start, L; V = 1.0, α = 1.0)
+function fg(mps_chain, zpairs, folder_name, id, maxiter, weight_in, config_start, L; V = 1.0, α = 1.0, binsize_target::Int = 30)
     tm = TaskMaker()
     tm.sweeps = Int(maxiter)
     tm.thermalization = Int(0)
-    tm.binsize = Int(30)
+    tm.binsize = min(binsize_target, Int(maxiter))  # capped so binsize never exceeds available sweeps
 
     tm.mps_chain = mps_chain
     tm.L = L
@@ -164,6 +164,7 @@ rcond       = 1e-5
 n_sweeps_lo = 1000
 n_sweeps_hi = 2500   # doubled from 2000 for tighter error bars at the high end of the ramp
 n_sweeps_sched(step) = round(Int, n_sweeps_lo + (n_sweeps_hi - n_sweeps_lo) * (step - 1) / (n_opt_steps - 1))
+binsize_target = 30   # desired Carlo error-estimation bin size, capped to maxiter when a step has fewer sweeps than this
 
 Egs_target = exact_gs_energy(V_target, L)
 println("exact GS (L=$L, V=$V_target) = $(round(Egs_target, digits=6))")
@@ -217,7 +218,7 @@ for χ in χ_list
         n_sw = n_sweeps_sched(step)
         w = M.get_overlap(mps_chain, string_start)[1]
         Es, Es_err, de = fg(mps_chain, zpairs, folder_name, "chi$(χ)_step$(step)",
-                             n_sw, w, s_trial, L; V = V_target, α = α_temper)
+                             n_sw, w, s_trial, L; V = V_target, α = α_temper, binsize_target = binsize_target)
         gnorm, converged = sr_step!(mps_chain, de; η = η_t, rcond = rcond)
 
         Wm_v  = de["results"]["W"]["mean"]
@@ -268,7 +269,7 @@ for χ in χ_list
     jldsave(outfile;
         L, χ, V_target, Egs_target,
         opt_E, opt_Eerr, opt_gnorm, opt_ess, opt_var,
-        n_opt_steps, η0, η_min, τ, rcond, α_temper, n_sweeps_lo, n_sweeps_hi,
+        n_opt_steps, η0, η_min, τ, rcond, α_temper, n_sweeps_lo, n_sweeps_hi, binsize_target,
         ent_entropy_initial, ent_entropy_final,
         mps_chain_final = mps_chain, zpairs, V_phys_list, V_left_list,
     )
