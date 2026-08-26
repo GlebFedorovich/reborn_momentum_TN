@@ -1,0 +1,33 @@
+# phase_scan.condor — vanilla-universe Condor submit file for
+# phase_scan_vmc_mpi.jl. All N_RANKS MPI processes run as ordinary child
+# processes within the ONE machine/slot Condor allocates to this job — this
+# is NOT HTCondor's `parallel` universe (that's only needed for MPI spanning
+# multiple physical machines).
+#
+# Submit with:  condor_submit grouped_ansatz/runs/phase_scan.condor
+
+universe   = vanilla
+executable = grouped_ansatz/runs/condor_run_phase_scan.sh
+arguments  = 5
+# ^ n_ranks: 1 controller + 4 replica workers, matching request_cpus below.
+#   Bump both together if you want more replicas.
+
+request_cpus   = 5
+request_memory = 8GB
+request_disk   = 2GB
+
+# Assumes the repo is on a filesystem visible from the execute node (shared
+# NFS/AFS home, common on many Condor pools) so relative paths inside the
+# .jl scripts (src/grouped_mps.jl, output/... dirs) resolve correctly. If
+# your pool instead uses ephemeral per-job scratch dirs, switch to:
+#   should_transfer_files = YES
+#   when_to_transfer_output = ON_EXIT
+#   transfer_input_files = grouped_ansatz/, Project.toml, Manifest.toml
+# and drop the `cd "$(dirname "$0")/.."` in the wrapper script accordingly.
+getenv = true
+
+log    = grouped_ansatz/output/phase_scan_condor.log
+output = grouped_ansatz/output/phase_scan_condor.out
+error  = grouped_ansatz/output/phase_scan_condor.err
+
+queue

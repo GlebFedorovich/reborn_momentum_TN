@@ -1,0 +1,227 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{siunitx}
+
+\title{Conventions and Cross-Validation Notes:\\
+Momentum-Space Grouped MPS Ansatz for the 1D $t$--$V$ Model}
+\author{grouped\_ansatz project notes}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{The model}
+
+We study the 1D spinless-fermion $t$--$V$ chain at half filling ($N=L/2$
+particles on $L$ sites), $t=1$ throughout.
+
+\subsection{Real space}
+
+\begin{equation}
+H = -t\sum_{i=1}^{L-1}\left(c_i^\dagger c_{i+1} + \mathrm{h.c.}\right)
+    - t\cos\theta\left(c_1^\dagger c_L + \mathrm{h.c.}\right)
+    + V\sum_{i=1}^{L-1} n_i n_{i+1}
+    + V\, n_1 n_L,
+\label{eq:Hreal}
+\end{equation}
+with $n_i = c_i^\dagger c_i$ and twist angle $\theta=\pi$ (antiperiodic
+hopping boundary condition: the wraparound bond $c_1^\dagger c_L$ picks up a
+sign flip, $-t\cos\pi = +t$). The interaction is a \emph{plain}
+density--density term, coefficient $V$ on every bond including the
+wraparound — density operators commute, so this term needs no boundary
+twist of its own (only the hopping does).
+
+\subsection{Momentum space}
+
+Fourier transform with half-odd-integer momentum quantization, matching the
+antiperiodic real-space boundary:
+\begin{equation}
+k_i = -\pi + \frac{\pi(2i-1)}{L}, \qquad i = 1,\dots,L,
+\label{eq:kquant}
+\end{equation}
+giving $L$ points evenly spaced by $2\pi/L$, symmetric about $k=0$, with no
+point exactly at $k=0$ or $k=\pi$. The Hamiltonian becomes
+\begin{equation}
+H = \sum_{i=1}^{L} \varepsilon(k_i)\, n_{k_i}
+    + \frac{1}{L}\sum_{i,j=1}^{L}\sum_{q=0}^{L-1}
+      V\cos\!\left(\frac{2\pi q}{L}\right)\,
+      c^\dagger_{k_i+q}\, c^\dagger_{k_j-q}\, c_{k_j}\, c_{k_i},
+\label{eq:Hmom}
+\end{equation}
+with $\varepsilon(k) = -2t\cos k$, and $q$ an integer shift of the
+\emph{mode index} (so $k_i + q$ means ``the mode $q$ steps away from mode
+$i$,'' a genuine momentum shift of $2\pi q/L$ since the modes in
+Eq.~\eqref{eq:kquant} are evenly spaced).
+
+\subsection{Why the vertex is $V\cos q$, not $2V\cos q$}
+\label{sec:derivation}
+
+This is worth deriving explicitly since an earlier version of this codebase
+used a $2V$ vertex by mistake (see \S\ref{sec:history}). Write
+$c_i = L^{-1/2}\sum_k e^{ikx_i}c_k$ with $x_i=i$. Then
+\begin{align}
+\sum_{i=1}^{L} n_i n_{i+1}
+&= \frac{1}{L^2}\sum_{i}\sum_{p_1,p_1',p_2,p_2'}
+   e^{i(p_1'-p_1)x_i}\,e^{i(p_2'-p_2)x_{i+1}}\,
+   c_{p_1}^\dagger c_{p_1'} c_{p_2}^\dagger c_{p_2'}.
+\end{align}
+Summing over $i$ enforces momentum conservation, $p_1'+p_2'=p_1+p_2$
+(mod $2\pi$). Writing $q \equiv p_1'-p_1$ (so $p_2'-p_2=-q$) and using
+$x_{i+1}=x_i+1$:
+\begin{equation}
+\sum_i n_i n_{i+1} = \frac{1}{L}\sum_{p_1,p_2,q} e^{-iq}\,
+   c_{p_1}^\dagger c_{p_1+q}\, c_{p_2}^\dagger c_{p_2-q}
+   \;\equiv\; \frac{1}{L}\sum_{p_1,p_2,q} e^{-iq}\, F(p_1,p_2,q).
+\end{equation}
+One shows $F(p_2,p_1,-q) = F(p_1,p_2,q)$ as an operator identity (moving a
+pair of fermion operators past another pair costs $(-1)^{2\times2}=+1$), so
+after summing over the dummy indices $p_1,p_2$, $F(q)\equiv\sum_{p_1,p_2}
+F(p_1,p_2,q)$ satisfies $F(q)=F(-q)$. Splitting $e^{-iq}=\cos q - i\sin q$,
+the $\sin q$ part is odd under $q\to-q$ while $F(q)$ is even, so it cancels
+exactly in the sum over the full Brillouin zone $q=0,\dots,L-1$ — leaving,
+with \emph{no extra factor of 2},
+\begin{equation}
+\sum_i n_i n_{i+1} = \frac{1}{L}\sum_{p_1,p_2,q} \cos q\;
+   c_{p_1}^\dagger c_{p_1+q}\, c_{p_2}^\dagger c_{p_2-q}.
+\end{equation}
+Hence $V\sum_i n_in_{i+1}$ maps to exactly the vertex $V\cos q$ used in
+Eq.~\eqref{eq:Hmom} — coefficient $1$, confirming the real-space bond
+coefficient and the momentum-space vertex coefficient must be numerically
+identical (both called $V$) for the two representations to describe the
+same Hamiltonian.
+
+\subsection{XXZ mapping and the phase transition}
+
+Via Jordan--Wigner, Eq.~\eqref{eq:Hreal} maps to the XXZ chain
+$H_{XXZ} = -t\sum_i (S_i^+S_{i+1}^- + \mathrm{h.c.}) + V\sum_i S_i^zS_{i+1}^z$
+(dropping a boundary/linear term that vanishes at half filling), i.e.
+anisotropy
+\begin{equation}
+\Delta = \frac{V}{2t}.
+\end{equation}
+The well-known gapless Luttinger-liquid ($\Delta<1$) to gapped
+charge-density-wave ($\Delta>1$) transition sits at $\Delta=1$, i.e.
+\begin{equation}
+\boxed{V_c = 2t.}
+\end{equation}
+With the corrected single-$V$ convention above, this is exactly the
+``textbook'' value; under the old (erroneous) $2V$ convention the same
+physical transition sat at $V_{\text{target}}=t$ instead, since the real
+bond coefficient was $2V_{\text{target}}$.
+
+\section{The grouped $(k,k{+}\pi)$ ansatz}
+
+The variational ansatz used throughout this project (\texttt{grouped\_mps.jl})
+groups each momentum mode $k$ with its partner $k+\pi$ into a single
+dimension-4 MPS supersite, rather than treating all $L$ modes as separate
+dimension-2 sites. This choice is directly motivated by the structure of
+Eq.~\eqref{eq:Hmom}: the interaction vertex $V\cos q$ is maximal in
+magnitude at $q=0$ (forward scattering) and $q=\pi$ (backscattering/umklapp,
+momentum transfer exactly $\pi$), and suppressed at intermediate $q$. The
+$q=\pi$ channel — pairs of modes separated by exactly $\pi$ — is therefore
+the single strongest correlation channel in the model, independently
+confirmed for the (spinful, on-site-$U$) Hubbard model in momentum space by
+Ehlers, S\'olyom, Legeza \& Noack [Phys.\ Rev.\ B \textbf{92}, 235116
+(2015)], who find empirically that reordering the DMRG chain to place
+$k,k+\pi$ pairs adjacent is the single most effective entanglement-reducing
+move. The grouped ansatz used here takes this one step further: instead of
+merely placing $k,k+\pi$ \emph{adjacent} in the MPS chain (paying for their
+correlation via a truncated bond), it \emph{fuses} them into one local
+tensor, absorbing that correlation entirely into the local physical
+dimension and paying nothing in bond dimension for it.
+
+\section{Numerical verification}
+
+All checks below were run after fixing the interaction coefficient
+consistently in every file that constructs $H$: the live VMC sampler
+(\texttt{get\_E\_loc} in \texttt{grouped\_mps.jl}), every momentum-space
+exact-diagonalization copy (\texttt{exact\_gs\_energy}, five files), the
+real-space DMRG Hamiltonian (\texttt{build\_H} in
+\texttt{dmrg\_reference.jl}/\texttt{phase\_scan\_dmrg.jl}), and the
+real-space exact-diagonalization reference (\texttt{ed\_reference}, same two
+files).
+
+\subsection{Momentum-space ED vs.\ real-space ED}
+
+Independent sparse exact diagonalizations in the two bases
+(\texttt{exact\_gs\_energy} vs.\ \texttt{ed\_reference}), ground-state
+energy per $(L,V)$:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}rrrrr@{}}
+\toprule
+$L$ & $V$ & $E_{\text{momentum}}$ & $E_{\text{real}}$ & $|\Delta E|$ \\
+\midrule
+4  & 0.5 & $-2.5894541729$ & $-2.5894541729$ & $4\times10^{-15}$ \\
+4  & 1.0 & $-2.3722813233$ & $-2.3722813233$ & $6\times10^{-15}$ \\
+4  & 2.0 & $-2.0000000000$ & $-2.0000000000$ & $1\times10^{-14}$ \\
+4  & 3.0 & $-1.7015621187$ & $-1.7015621187$ & $6\times10^{-15}$ \\
+8  & 0.5 & $-4.6769911638$ & $-4.6769911638$ & $5\times10^{-15}$ \\
+8  & 1.0 & $-4.1739887103$ & $-4.1739887103$ & $2\times10^{-15}$ \\
+8  & 2.0 & $-3.3021868179$ & $-3.3021868179$ & $4\times10^{-15}$ \\
+8  & 3.0 & $-2.6070908186$ & $-2.6070908186$ & $7\times10^{-15}$ \\
+12 & 0.5 & $-6.8859094308$ & $-6.8859094308$ & $1\times10^{-14}$ \\
+12 & 1.0 & $-6.1145448817$ & $-6.1145448817$ & $1\times10^{-14}$ \\
+12 & 2.0 & $-4.7747818349$ & $-4.7747818349$ & $4\times10^{-15}$ \\
+12 & 3.0 & $-3.7097076448$ & $-3.7097076448$ & $2\times10^{-14}$ \\
+\bottomrule
+\end{tabular}
+\caption{Ground-state energy match between the two exact-diagonalization
+constructions, machine precision throughout.}
+\end{table}
+
+\subsection{VMC local-energy estimator vs.\ ED (\texttt{test\_paired\_eloc.jl})}
+
+For a trial (non-optimized) grouped-ansatz state, enumerated exactly over
+the full $N=L/2$ sector at $L=8$ ($D=70$ basis states):
+\begin{align*}
+V=0.0:&\quad \langle\psi|H|\psi\rangle/\langle\psi|\psi\rangle = -5.0962372381,
+   \quad \textstyle\sum_s p(s)\,E_{\text{loc}}(s) = -5.0962372381
+   \ \ (|\Delta|=0)\\
+V=0.7:&\quad \langle\psi|H|\psi\rangle/\langle\psi|\psi\rangle = -2.8241408216,
+   \quad \textstyle\sum_s p(s)\,E_{\text{loc}}(s) = -2.8241408216
+   \ \ (|\Delta|=3\times10^{-15})
+\end{align*}
+confirming \texttt{get\_E\_loc} — the estimator actually sampled during
+VMC/SR optimization — reproduces the exact variational energy of the same
+state to machine precision, i.e.\ the interaction-coefficient fix was
+applied consistently to the sampler itself, not only to the ED
+cross-checks.
+
+\subsection{Full DMRG optimizer vs.\ ED}
+
+Running the actual two-site DMRG optimizer (not just its ED reference) at
+$L=8$, $V=1.0$, $\chi=16$:
+\[
+E_{\text{DMRG}} = -4.17398871, \qquad E_{\text{ED}} = -4.17398871,
+\qquad \text{gap} = 1.3\times10^{-9}.
+\]
+
+\section{Convention history}
+\label{sec:history}
+
+An earlier version of every file listed above used a real-space
+coefficient of $2V\,n_in_{i+1}$ (equivalently a momentum-space vertex of
+$2V\cos q$) under the \emph{same} variable name $V$. This was originally
+\emph{discovered} — not designed — by comparing the full eigenvalue
+spectrum (not just the ground state, which can match coincidentally at
+small $L$) between the momentum-space Hamiltonian and several candidate
+real-space Hamiltonians, and finding that a factor of $2$ was needed for the
+two representations to agree. That factor-of-2 convention was traceable to
+how the momentum-space Hamiltonian was originally written down (inherited
+from an earlier, pre-grouped-ansatz version of this codebase) and was never
+an intentional physical choice.
+
+The practical consequence: under the old convention, the LL$\to$CDW
+transition (Eq.~13, $\Delta=1$) occurred at $V_{\text{target}}=t$, not
+$V_{\text{target}}=2t$ as the standard ``$V=2t$'' phrasing for the $t$--$V$
+model implies. Every file was then changed together (see
+\S\ref{sec:derivation}) to drop the extra factor of $2$, verified via all
+the checks in this section, restoring the standard convention
+$\Delta=V/(2t)$, $V_c=2t$.
+
+\end{document}

@@ -1,0 +1,14 @@
+# Regenerable Carlo job outputs from demo runs (HDF5 checkpoints + per-step results).
+# These pile up (GBs) and are reproduced by re-running demo/demo.jl.
+test_output/example_job_test_*.data
+test_output/example_job_test_*.results.json
+
+# Same, for grouped_ansatz/demo.jl (dim-4 grouped ansatz) — regenerable per run.
+grouped_ansatz/output/grouped_job_*.data
+grouped_ansatz/output/grouped_job_*.results.json
+
+# Keep the extracted figures (PNGs in test_output/ and figures/ stay tracked).
+
+.claude/
+.vscode/
+.figures/

@@ -1,0 +1,4 @@
+dmrg_reference summary — L=8, t=1.00, V=0.50, twisted-boundary exact GS = -4.17398871
+
+   chi                E            gap        eps         max(S)
+     8      -4.16787426      6.114e-03   3.30e-05         1.0312

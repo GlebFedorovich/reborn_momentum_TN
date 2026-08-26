@@ -1,0 +1,4 @@
+chi_scan_mpi summary — L=16, V=0.50, exact GS = -8.085527, 5 rank(s) (4 replica(s)/step)
+
+   chi        E_final          err          gap     Var(E_loc)      ESS
+     8      -8.020811     1.12e-01     0.064715      5.811e-05    0.696
